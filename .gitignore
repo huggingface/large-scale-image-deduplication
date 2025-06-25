@@ -5,3 +5,6 @@ __pycache__
 *.swp
 .DS_Store
 .venv/
+
+uv.lock
+pyproject.toml

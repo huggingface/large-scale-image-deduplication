@@ -17,8 +17,8 @@ skew_320 = transforms.Compose([
     normalize,
 ])
 
-model = torch.jit.load("sscd_disc_mixup.torchscript.pt")
-img = Image.open("image_mmstar.jpg").convert('RGB')
+model = torch.jit.load("models/sscd_disc_mixup.torchscript.pt")
+img = Image.open("data/image_mmstar.jpg").convert('RGB')
 
 batch1 = small_288(img).unsqueeze(0)
 batch2 = skew_320(img).unsqueeze(0)
