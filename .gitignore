@@ -1,0 +1,7 @@
+/output/
+/data/
+/models/
+__pycache__
+*.swp
+.DS_Store
+.venv/
