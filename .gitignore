@@ -1,6 +1,7 @@
 /output/
 /data/
 /models/
+/embeddings/
 __pycache__
 *.swp
 .DS_Store
