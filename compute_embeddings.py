@@ -14,6 +14,7 @@ class ImageCollator:
     
     def __init__(self, transform):
         self.transform = transform
+        self.global_index = 0  # Track global index across all processed images
     
     def __call__(self, batch):
         images = []
@@ -32,18 +33,20 @@ class ImageCollator:
                 
                 # Handle both single images and lists of images
                 if isinstance(image_data, list):
-                    # If it's a list, process each image
+                    # If it's a list, process each image with unique index
                     for img in image_data:
                         if img is not None:
                             processed_img = img.convert('RGB')
                             images.append(self.transform(processed_img))
-                            indices.append(item['__index_level_0__'] if '__index_level_0__' in item else len(images)-1)
+                            indices.append(self.global_index)
+                            self.global_index += 1
                 else:
                     # If it's a single image
                     if image_data is not None:
                         processed_img = image_data.convert('RGB')
                         images.append(self.transform(processed_img))
-                        indices.append(item['__index_level_0__'] if '__index_level_0__' in item else len(images)-1)
+                        indices.append(self.global_index)
+                        self.global_index += 1
             except Exception as e:
                 print(f"Error processing item {i}: {e}")
         if images:
