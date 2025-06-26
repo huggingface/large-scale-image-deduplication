@@ -8,95 +8,130 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import os
 
-def compute_embeddings(dataset_name, name=None, split='val', output_dir='embeddings', batch_size=512):
-    """Compute embeddings for all images in a HuggingFace dataset."""
+
+class ImageCollator:
+    """Collator class for processing image batches with transforms."""
     
-    function_start_time = time.time()
+    def __init__(self, transform):
+        self.transform = transform
     
-    # Check for GPU availability
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
-    
-    # Load dataset and model
-    dataset = load_dataset(dataset_name, name=name, split=split)
-    model = torch.jit.load("models/sscd_disc_mixup.torchscript.pt")
-    model.eval()
-    model = model.to(device)  # Move model to GPU
-    
-    # Setup transforms
-    normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225],
-    )
-    transform = transforms.Compose([
-        transforms.Resize([320, 320]),
-        transforms.ToTensor(),
-        normalize,
-    ])
-    
-    # Custom collate function for DataLoader
-    def collate_fn(batch):
+    def __call__(self, batch):
         images = []
         indices = []
         for i, item in enumerate(batch):
             try:
                 image = item['image'].convert('RGB')
-                images.append(transform(image))
+                images.append(self.transform(image))
                 indices.append(item['__index_level_0__'] if '__index_level_0__' in item else len(images)-1)
             except:
                 continue
         if images:
             return torch.stack(images), indices
         return None, []
-    
-    # Create DataLoader for efficient batching
-    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn, num_workers=8)
-    
-    # Create output directory
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Process images in batches
+
+
+def setup_device():
+    """Setup and return the appropriate device (GPU/CPU)."""
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
+    return device
+
+
+def load_model(model_path="models/sscd_disc_mixup.torchscript.pt", device=None):
+    """Load and setup the model."""
+    model = torch.jit.load(model_path)
+    model.eval()
+    if device:
+        model = model.to(device)
+    return model
+
+
+def create_transforms():
+    """Create and return image transforms."""
+    normalize = transforms.Normalize(
+        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225],
+    )
+    return transforms.Compose([
+        transforms.Resize([320, 320]),
+        transforms.ToTensor(),
+        normalize,
+    ])
+
+
+def compute_batch_embeddings(model, dataloader, device):
+    """Compute embeddings for all batches and return results with timing info."""
     embeddings_list = []
     image_ids = []
-    
-    start_time = time.time()
     model_inference_time = 0.0
+    
     with torch.no_grad():
         for batch_tensor, batch_indices in tqdm(dataloader, desc="Computing embeddings"):
             if batch_tensor is not None:
-                batch_tensor = batch_tensor.to(device)  # Move batch to GPU
+                batch_tensor = batch_tensor.to(device)
                 start_model_time = time.time()
                 embeddings = model(batch_tensor)
                 end_model_time = time.time()
                 model_inference_time += end_model_time - start_model_time
-                embeddings_list.append(embeddings.cpu().numpy())  # Move back to CPU before saving
+                embeddings_list.append(embeddings.cpu().numpy())
                 image_ids.extend(batch_indices)
     
-    # Combine all embeddings
-    all_embeddings = np.vstack(embeddings_list)
-    end_time = time.time()
-    
-    # Calculate timing metrics
-    total_time = end_time - start_time
-    time_per_sample = total_time / len(all_embeddings) if len(all_embeddings) > 0 else 0
-    model_time_per_sample = model_inference_time / len(all_embeddings) if len(all_embeddings) > 0 else 0
-    
-    # Sanitize dataset name for filename
+    return embeddings_list, image_ids, model_inference_time
+
+
+def save_results(embeddings, image_ids, dataset_name, split, output_dir):
+    """Save embeddings and image IDs to files."""
+    os.makedirs(output_dir, exist_ok=True)
     sanitized_dataset_name = dataset_name.replace('/', '-')
     
-    # Save embeddings and metadata
-    np.save(os.path.join(output_dir, f'{sanitized_dataset_name}_{split}_embeddings.npy'), all_embeddings)
+    np.save(os.path.join(output_dir, f'{sanitized_dataset_name}_{split}_embeddings.npy'), embeddings)
     np.save(os.path.join(output_dir, f'{sanitized_dataset_name}_{split}_image_ids.npy'), np.array(image_ids))
+
+
+def print_results(embeddings, total_time, model_inference_time, output_dir):
+    """Print timing and result statistics."""
+    num_embeddings = len(embeddings)
+    time_per_sample = total_time / num_embeddings if num_embeddings > 0 else 0
+    model_time_per_sample = model_inference_time / num_embeddings if num_embeddings > 0 else 0
     
-    print(f"Saved {len(all_embeddings)} embeddings to {output_dir}")
-    print(f"Embedding shape: {all_embeddings.shape}")
+    print(f"Saved {num_embeddings} embeddings to {output_dir}/")
+    print(f"Embedding shape: {embeddings.shape}")
     print(f"Total time: {total_time:.5f} seconds")
     print(f"Time per sample: {time_per_sample:.5f} seconds")
     print(f"Model inference time: {model_inference_time:.5f} seconds")
     print(f"Model time per sample: {model_time_per_sample:.5f} seconds")
+
+
+def compute_embeddings(dataset_name, name=None, split='val', output_dir='embeddings', batch_size=512):
+    """Compute embeddings for all images in a HuggingFace dataset."""
+    function_start_time = time.time()
+    
+    # Setup components
+    device = setup_device()
+    model = load_model(device=device)
+    transform = create_transforms()
+    collator = ImageCollator(transform)
+    
+    # Load dataset
+    dataset = load_dataset(dataset_name, name=name, split=split)
+    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collator, num_workers=8)
+    
+    # Compute embeddings
+    start_time = time.time()
+    embeddings_list, image_ids, model_inference_time = compute_batch_embeddings(model, dataloader, device)
+    end_time = time.time()
+    
+    # Process results
+    all_embeddings = np.vstack(embeddings_list)
+    total_time = end_time - start_time
+    
+    # Save and report results
+    save_results(all_embeddings, image_ids, dataset_name, split, output_dir)
+    print_results(all_embeddings, total_time, model_inference_time, output_dir)
     
     function_end_time = time.time()
     function_total_time = function_end_time - function_start_time
     print(f"Total function time: {function_total_time:.5f} seconds")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compute embeddings for HuggingFace dataset")
