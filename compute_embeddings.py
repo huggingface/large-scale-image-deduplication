@@ -4,11 +4,14 @@ import argparse
 import time
 from torchvision import transforms
 from datasets import load_dataset
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 import os
 
 def compute_embeddings(dataset_name, name=None, split='val', output_dir='embeddings', batch_size=512):
     """Compute embeddings for all images in a HuggingFace dataset."""
+    
+    function_start_time = time.time()
     
     # Check for GPU availability
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -30,6 +33,24 @@ def compute_embeddings(dataset_name, name=None, split='val', output_dir='embeddi
         normalize,
     ])
     
+    # Custom collate function for DataLoader
+    def collate_fn(batch):
+        images = []
+        indices = []
+        for i, item in enumerate(batch):
+            try:
+                image = item['image'].convert('RGB')
+                images.append(transform(image))
+                indices.append(item['__index_level_0__'] if '__index_level_0__' in item else len(images)-1)
+            except:
+                continue
+        if images:
+            return torch.stack(images), indices
+        return None, []
+    
+    # Create DataLoader for efficient batching
+    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn, num_workers=8)
+    
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
     
@@ -40,29 +61,15 @@ def compute_embeddings(dataset_name, name=None, split='val', output_dir='embeddi
     start_time = time.time()
     model_inference_time = 0.0
     with torch.no_grad():
-        for i in tqdm(range(0, len(dataset), batch_size), desc="Computing embeddings"):
-            batch_data = dataset[i:i+batch_size]
-            batch_images = []
-            batch_ids = []
-
-            for j, item in enumerate(batch_data['image']):
-                try:
-                    image = item.convert('RGB')
-                    batch_images.append(transform(image))
-                    batch_ids.append(i + j)
-                except Exception as e:
-                    print(f"Error processing image {i + j}: {e}")
-                    continue
-                continue
-            
-            if batch_images:
-                batch_tensor = torch.stack(batch_images).to(device)  # Move batch to GPU
+        for batch_tensor, batch_indices in tqdm(dataloader, desc="Computing embeddings"):
+            if batch_tensor is not None:
+                batch_tensor = batch_tensor.to(device)  # Move batch to GPU
                 start_model_time = time.time()
                 embeddings = model(batch_tensor)
                 end_model_time = time.time()
                 model_inference_time += end_model_time - start_model_time
                 embeddings_list.append(embeddings.cpu().numpy())  # Move back to CPU before saving
-                image_ids.extend(batch_ids)
+                image_ids.extend(batch_indices)
     
     # Combine all embeddings
     all_embeddings = np.vstack(embeddings_list)
@@ -86,6 +93,10 @@ def compute_embeddings(dataset_name, name=None, split='val', output_dir='embeddi
     print(f"Time per sample: {time_per_sample:.5f} seconds")
     print(f"Model inference time: {model_inference_time:.5f} seconds")
     print(f"Model time per sample: {model_time_per_sample:.5f} seconds")
+    
+    function_end_time = time.time()
+    function_total_time = function_end_time - function_start_time
+    print(f"Total function time: {function_total_time:.5f} seconds")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compute embeddings for HuggingFace dataset")
