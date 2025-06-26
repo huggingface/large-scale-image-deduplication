@@ -14,13 +14,18 @@ class ImageCollator:
     
     def __init__(self, transform):
         self.transform = transform
-        self.global_index = 0  # Track global index across all processed images
     
     def __call__(self, batch):
         images = []
         indices = []
-        for i, item in enumerate(batch):
+        for item in batch:
             try:
+                # Get the explicit dataset index we added
+                dataset_idx = item.get('dataset_idx', None)
+                if dataset_idx is None:
+                    print(f"Warning: No dataset_idx found in item")
+                    continue
+                
                 # Handle both 'image' and 'images' keys
                 image_data = None
                 if 'images' in item:
@@ -28,27 +33,27 @@ class ImageCollator:
                 elif 'image' in item:
                     image_data = item['image']
                 else:
-                    print(f"Warning: No 'image' or 'images' key found in item {i}")
+                    print(f"Warning: No 'image' or 'images' key found in item")
                     continue
                 
                 # Handle both single images and lists of images
                 if isinstance(image_data, list):
-                    # If it's a list, process each image with unique index
+                    # If it's a list, process each image but assign same index (they belong to same item)
                     for img in image_data:
                         if img is not None:
                             processed_img = img.convert('RGB')
                             images.append(self.transform(processed_img))
-                            indices.append(self.global_index)
-                            self.global_index += 1
+                            indices.append(dataset_idx)
                 else:
                     # If it's a single image
                     if image_data is not None:
                         processed_img = image_data.convert('RGB')
                         images.append(self.transform(processed_img))
-                        indices.append(self.global_index)
-                        self.global_index += 1
+                        indices.append(dataset_idx)
+                
             except Exception as e:
-                print(f"Error processing item {i}: {e}")
+                print(f"Error processing item: {e}")
+                
         if images:
             return torch.stack(images), indices
         return None, []
@@ -142,8 +147,9 @@ def compute_embeddings(dataset_name, name=None, split='val', output_dir='embeddi
     transform = create_transforms()
     collator = ImageCollator(transform)
     
-    # Load dataset
+    # Load dataset and add explicit indices
     dataset = load_dataset(dataset_name, name=name, split=split)
+    dataset = dataset.add_column("dataset_idx", list(range(len(dataset))))
     dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collator, num_workers=8)
     
     # Compute embeddings
