@@ -20,11 +20,32 @@ class ImageCollator:
         indices = []
         for i, item in enumerate(batch):
             try:
-                image = item['image'].convert('RGB')
-                images.append(self.transform(image))
-                indices.append(item['__index_level_0__'] if '__index_level_0__' in item else len(images)-1)
-            except:
-                continue
+                # Handle both 'image' and 'images' keys
+                image_data = None
+                if 'images' in item:
+                    image_data = item['images']
+                elif 'image' in item:
+                    image_data = item['image']
+                else:
+                    print(f"Warning: No 'image' or 'images' key found in item {i}")
+                    continue
+                
+                # Handle both single images and lists of images
+                if isinstance(image_data, list):
+                    # If it's a list, process each image
+                    for img in image_data:
+                        if img is not None:
+                            processed_img = img.convert('RGB')
+                            images.append(self.transform(processed_img))
+                            indices.append(item['__index_level_0__'] if '__index_level_0__' in item else len(images)-1)
+                else:
+                    # If it's a single image
+                    if image_data is not None:
+                        processed_img = image_data.convert('RGB')
+                        images.append(self.transform(processed_img))
+                        indices.append(item['__index_level_0__'] if '__index_level_0__' in item else len(images)-1)
+            except Exception as e:
+                print(f"Error processing item {i}: {e}")
         if images:
             return torch.stack(images), indices
         return None, []
