@@ -40,10 +40,10 @@ def create_transform():
     """Create the image transformation pipeline."""
     normalize = transforms.Normalize(mean=NORMALIZE_MEAN, std=NORMALIZE_STD)
     return transforms.Compose([
-        transforms.Resize(288),
-        transforms.CenterCrop(150),
-        transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
-        transforms.RandomAffine(degrees=10, translate=[0.1, 0.2], scale=[0.8, 0.9], shear=5),
+        transforms.Resize([320, 320]), #transforms.Resize(288),
+        #transforms.CenterCrop(150),
+        #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
+        #transforms.RandomAffine(degrees=10, translate=[0.1, 0.2], scale=[0.8, 0.9], shear=5),
         transforms.ToTensor(),
         normalize,
     ])
@@ -132,10 +132,34 @@ def visualize_results(query_tensor, dataset, top_image_ids, top_similarities, ou
     
     for i, (pos, img_id, sim) in enumerate(zip(positions, top_image_ids, top_similarities)):
         try:
-            similar_img = dataset[int(img_id)]['image'].convert('RGB')
+            dataset_item = dataset[int(img_id)]
+            
+            # Handle both 'image' and 'images' keys
+            image_data = None
+            if 'images' in dataset_item:
+                image_data = dataset_item['images']
+            elif 'image' in dataset_item:
+                image_data = dataset_item['image']
+            else:
+                raise KeyError("No 'image' or 'images' key found")
+            
+            # Handle both single images and lists of images
+            if isinstance(image_data, list):
+                # If it's a list, use the first image
+                if len(image_data) > 0 and image_data[0] is not None:
+                    similar_img = image_data[0].convert('RGB')
+                else:
+                    raise ValueError("Empty or invalid image list")
+            else:
+                # If it's a single image
+                if image_data is not None:
+                    similar_img = image_data.convert('RGB')
+                else:
+                    raise ValueError("Image data is None")
+            
             axes[pos].imshow(similar_img)
-        except Exception:
-            axes[pos].text(0.5, 0.5, f"Error loading\nimage {img_id}", 
+        except Exception as e:
+            axes[pos].text(0.5, 0.5, f"Error loading\nimage {img_id}\n{str(e)[:50]}", 
                           ha='center', va='center', transform=axes[pos].transAxes)
         
         axes[pos].set_title(f"#{i+1} Similar\nID: {img_id}\nSim: {sim:.5f}", fontsize=10)
