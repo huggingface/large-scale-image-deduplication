@@ -146,7 +146,7 @@ def visualize_results(query_tensor, dataset, top_image_ids, top_similarities, ou
     plt.close()
     print(f"Visualization saved to: {output_file}")
 
-def find_similar_images(image_paths, embeddings_file, image_ids_file, dataset_name=None, split='val', top_k=5):
+def find_similar_images(image_paths, embeddings_file, image_ids_file, dataset_name=None, name=None, split='val', top_k=5):
     """Find the most similar images to one or more query images using precomputed embeddings."""
     # Ensure image_paths is a list
     if isinstance(image_paths, str):
@@ -178,7 +178,7 @@ def find_similar_images(image_paths, embeddings_file, image_ids_file, dataset_na
     
     if dataset_name:
         print("\nLoading dataset for visualization...")
-        dataset = load_dataset(dataset_name, split=split)
+        dataset = load_dataset(dataset_name, name=name, split=split)
         
         for i, img_path in enumerate(image_paths):
             output_file = embeddings_file.replace('.npy', f'_{os.path.basename(img_path)}')
@@ -214,6 +214,8 @@ def main():
                        help="Path to image IDs (.npy file)")
     parser.add_argument("--dataset", type=str, 
                        help="HuggingFace dataset name for visualization")
+    parser.add_argument("--name", type=str, default=None, 
+                       help="Dataset (subset) name")
     parser.add_argument("--split", type=str, default="val", 
                        help="Dataset split used for embeddings")
     parser.add_argument("--top_k", type=int, default=5, 
@@ -225,7 +227,7 @@ def main():
         validate_files(args.images, args.embeddings, args.image_ids)
         find_similar_images(
             args.images, args.embeddings, args.image_ids, 
-            args.dataset, args.split, args.top_k
+            args.dataset, args.name, args.split, args.top_k
         )
     except FileNotFoundError as e:
         print(f"Error: {e}")

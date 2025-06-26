@@ -78,13 +78,20 @@ def compute_batch_embeddings(model, dataloader, device):
     return embeddings_list, image_ids, model_inference_time
 
 
-def save_results(embeddings, image_ids, dataset_name, split, output_dir):
+def save_results(embeddings, image_ids, dataset_name, split, output_dir, name=None):
     """Save embeddings and image IDs to files."""
     os.makedirs(output_dir, exist_ok=True)
     sanitized_dataset_name = dataset_name.replace('/', '-')
     
-    np.save(os.path.join(output_dir, f'{sanitized_dataset_name}_{split}_embeddings.npy'), embeddings)
-    np.save(os.path.join(output_dir, f'{sanitized_dataset_name}_{split}_image_ids.npy'), np.array(image_ids))
+    # Include name in filename if provided
+    if name:
+        sanitized_name = name.replace('/', '-')
+        filename_base = f'{sanitized_dataset_name}_{sanitized_name}_{split}'
+    else:
+        filename_base = f'{sanitized_dataset_name}_{split}'
+    
+    np.save(os.path.join(output_dir, f'{filename_base}_embeddings.npy'), embeddings)
+    np.save(os.path.join(output_dir, f'{filename_base}_image_ids.npy'), np.array(image_ids))
 
 
 def print_results(embeddings, total_time, model_inference_time, output_dir):
@@ -125,7 +132,7 @@ def compute_embeddings(dataset_name, name=None, split='val', output_dir='embeddi
     total_time = end_time - start_time
     
     # Save and report results
-    save_results(all_embeddings, image_ids, dataset_name, split, output_dir)
+    save_results(all_embeddings, image_ids, dataset_name, split, output_dir, name)
     print_results(all_embeddings, total_time, model_inference_time, output_dir)
     
     function_end_time = time.time()
