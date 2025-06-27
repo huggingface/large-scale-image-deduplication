@@ -7,7 +7,10 @@ from datasets import load_dataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import os
+from PIL import Image, ImageFile
 
+# Enable loading of truncated images
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class ImageCollator:
     """Collator class for processing image batches with transforms."""
@@ -20,11 +23,15 @@ class ImageCollator:
         if img is None:
             return False
         
-        # Check if it has the convert method (PIL Image-like)
-        if not hasattr(img, 'convert'):
+        try:
+            # Try to actually load/verify the image to catch truncated images early
+            img.load()
+            # Test if we can convert it to RGB
+            _ = img.convert('RGB')
+            return True
+        except (OSError, IOError, Image.DecompressionBombError, Exception) as e:
+            print(f"Warning: Invalid or corrupted image detected: {e}")
             return False
-        
-        return True
     
     def __call__(self, batch):
         images = []
@@ -209,7 +216,7 @@ if __name__ == "__main__":
     parser.add_argument("--split", type=str, default="val", help="Dataset split to process")
     parser.add_argument("--name", type=str, default=None, help="Dataset (subset) name")
     parser.add_argument("--output_dir", type=str, default="embeddings", help="Output directory for embeddings")
-    parser.add_argument("--batch_size", type=int, default=512, help="Batch size for processing")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for processing")
     
     args = parser.parse_args()
     compute_embeddings(args.dataset, args.name, args.split, args.output_dir, args.batch_size) 
