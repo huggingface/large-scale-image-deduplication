@@ -152,3 +152,96 @@ python dedup_dataset.py
   --split test
   --precomputed_dir embeddings
 ```
+
+This results in the following:
+```
+Step 1: Computing embeddings for new dataset...
+Using device: cuda
+Computing embeddings: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 313/313 [00:39<00:00,  7.88it/s]
+Saved 10000 embeddings to embeddings-tmp/
+Embedding shape: (10000, 512)
+Total time: 39.71915 seconds
+Time per sample: 0.00397 seconds
+Model inference time: 2.04610 seconds
+Model time per sample: 0.00020 seconds
+Total function time: 40.81330 seconds
+Step 2: Finding duplicates against precomputed embeddings...
+Loaded 10000 new embeddings
+Found 66 precomputed embedding files
+Comparing against precomputed file 1/66: lmms-lab-Egothink_Localization_spatial_test_embeddings.npy
+Comparing against precomputed file 2/66: lmms-lab-LiveBench_2024-07_test_embeddings.npy
+Comparing against precomputed file 3/66: lmms-lab-SEED-Bench_test_embeddings.npy
+Comparing against precomputed file 4/66: lmms-lab-Egothink_Forecasting_test_embeddings.npy
+Comparing against precomputed file 5/66: lmms-lab-DC100_EN_test_embeddings.npy
+Comparing against precomputed file 6/66: lmms-lab-MMBench_EN_test_embeddings.npy
+Comparing against precomputed file 7/66: lmms-lab-OCRBench-v2_test_embeddings.npy
+Comparing against precomputed file 8/66: lmms-lab-LLaVA-NeXT-Interleave-Bench_in_domain_test_embeddings.npy
+Comparing against precomputed file 9/66: lmms-lab-ScienceQA_ScienceQA-FULL_test_embeddings.npy
+Comparing against precomputed file 10/66: lmms-lab-flickr30k_test_embeddings.npy
+Comparing against precomputed file 11/66: lmms-lab-Egothink_Reasoning_comparing_test_embeddings.npy
+Comparing against precomputed file 12/66: lmms-lab-continous-benchmark_arxiv_test_embeddings.npy
+Comparing against precomputed file 13/66: lmms-lab-VisualWebBench_webqa_test_embeddings.npy
+Comparing against precomputed file 14/66: lmms-lab-COCO-Caption_test_embeddings.npy
+Comparing against precomputed file 15/66: lmms-lab-LLaVA-Bench-Wilder_test_embeddings.npy
+Comparing against precomputed file 16/66: lmms-lab-RefCOCO_test_embeddings.npy
+Comparing against precomputed file 17/66: lmms-lab-GQA_test_all_images_test_embeddings.npy
+Comparing against precomputed file 18/66: lmms-lab-LiveBench_2024-09_test_embeddings.npy
+Comparing against precomputed file 19/66: lmms-lab-MIA-Bench_test_embeddings.npy
+Comparing against precomputed file 20/66: lmms-lab-VisualWebBench_element_ocr_test_embeddings.npy
+Comparing against precomputed file 21/66: lmms-lab-DocVQA_DocVQA_test_embeddings.npy
+Comparing against precomputed file 22/66: lmms-lab-MME_test_embeddings.npy
+Comparing against precomputed file 23/66: lmms-lab-POPE_test_embeddings.npy
+Comparing against precomputed file 24/66: lmms-lab-ai2d-no-mask_test_embeddings.npy
+Comparing against precomputed file 25/66: lmms-lab-ChartQA_test_embeddings.npy
+Comparing against precomputed file 26/66: lmms-lab-Egothink_Activity_test_embeddings.npy
+Comparing against precomputed file 27/66: lmms-lab-MMMU_test_embeddings.npy
+Comparing against precomputed file 28/66: lmms-lab-VisualWebBench_action_ground_test_embeddings.npy
+Comparing against precomputed file 29/66: lmms-lab-VQAv2_test_embeddings.npy
+Comparing against precomputed file 30/66: lmms-lab-LiveBench_2024-08_test_embeddings.npy
+Comparing against precomputed file 31/66: lmms-lab-LLaVA-NeXT-Interleave-Bench_multi_view_in_domain_test_embeddings.npy
+Comparing against precomputed file 32/66: lmms-lab-LiveBench_2024-05_test_embeddings.npy
+Comparing against precomputed file 33/66: lmms-lab-continous-benchmark_bbc_news_test_embeddings.npy
+Comparing against precomputed file 34/66: lmms-lab-MMVet_test_embeddings.npy
+Comparing against precomputed file 35/66: lmms-lab-SEED-Bench-2_test_embeddings.npy
+Comparing against precomputed file 36/66: lmms-lab-NoCaps_test_embeddings.npy
+Comparing against precomputed file 37/66: lmms-lab-continous-benchmark_ESPN_test_embeddings.npy
+Comparing against precomputed file 38/66: lmms-lab-MMT-Benchmark_test_embeddings.npy
+Comparing against precomputed file 39/66: lmms-lab-Egothink_Object_affordance_test_embeddings.npy
+Comparing against precomputed file 40/66: lmms-lab-RealWorldQA_test_embeddings.npy
+Comparing against precomputed file 41/66: lmms-lab-ai2d_test_embeddings.npy
+Comparing against precomputed file 42/66: lmms-lab-TextCaps_test_embeddings.npy
+Comparing against precomputed file 43/66: lmms-lab-Egothink_Planning_navigation_test_embeddings.npy
+Comparing against precomputed file 44/66: lmms-lab-Egothink_Localization_location_test_embeddings.npy
+Comparing against precomputed file 45/66: lmms-lab-Egothink_Planning_assistance_test_embeddings.npy
+Comparing against precomputed file 46/66: lmms-lab-VizWiz-VQA_test_embeddings.npy
+Comparing against precomputed file 47/66: lmms-lab-Ferret-Bench_test_embeddings.npy
+Comparing against precomputed file 48/66: lmms-lab-Egothink_Reasoning_counting_test_embeddings.npy
+Comparing against precomputed file 49/66: lmms-lab-VisualWebBench_action_prediction_test_embeddings.npy
+Comparing against precomputed file 50/66: lmms-lab-LiveBench_2024-06_test_embeddings.npy
+Comparing against precomputed file 51/66: lmms-lab-Egothink_Object_attribute_test_embeddings.npy
+Comparing against precomputed file 52/66: lmms-lab-Egothink_Object_existence_test_embeddings.npy
+Comparing against precomputed file 53/66: lmms-lab-Egothink_Reasoning_situated_test_embeddings.npy
+Comparing against precomputed file 54/66: lmms-lab-textvqa_test_embeddings.npy
+Comparing against precomputed file 55/66: lmms-lab-continous-benchmark_wiki_articles_test_embeddings.npy
+Comparing against precomputed file 56/66: lmms-lab-VisualWebBench_web_caption_test_embeddings.npy
+Comparing against precomputed file 57/66: lmms-lab-VisualWebBench_heading_ocr_test_embeddings.npy
+Comparing against precomputed file 58/66: lmms-lab-MMT_MI-Benchmark_test_embeddings.npy
+Comparing against precomputed file 59/66: lmms-lab-DocVQA_InfographicVQA_test_embeddings.npy
+Comparing against precomputed file 60/66: lmms-lab-VizWiz-Caps_test_embeddings.npy
+Comparing against precomputed file 61/66: lmms-lab-ScienceQA_ScienceQA-IMG_test_embeddings.npy
+Comparing against precomputed file 62/66: lmms-lab-COCO-Caption2017_test_embeddings.npy
+Comparing against precomputed file 63/66: lmms-lab-LLaVA-NeXT-Interleave-Bench_out_of_domain_test_embeddings.npy
+Comparing against precomputed file 64/66: lmms-lab-ST-VQA_test_embeddings.npy
+Comparing against precomputed file 65/66: lmms-lab-vstar-bench_test_embeddings.npy
+Comparing against precomputed file 66/66: lmms-lab-VisualWebBench_element_ground_test_embeddings.npy
+
+Timing Summary:
+Total execution: 65.49147 seconds
+Embedding computation: 40.83068 seconds (62.3%)
+Duplicate detection: 24.66074 seconds (37.7%)
+  - Loading precomputed: 0.35375 seconds (0.5%)
+  - Similarity search: 24.25959 seconds (37.0%)
+
+Found 10000 duplicate images out of 10000
+Duplicate results saved to: duplicates/duplicates_lmms-lab-OCRBench-v2_test.json
+```
