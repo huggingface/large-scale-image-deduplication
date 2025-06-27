@@ -15,6 +15,17 @@ class ImageCollator:
     def __init__(self, transform):
         self.transform = transform
     
+    def _is_valid_image(self, img):
+        """Check if the object is a valid image that can be processed."""
+        if img is None:
+            return False
+        
+        # Check if it has the convert method (PIL Image-like)
+        if not hasattr(img, 'convert'):
+            return False
+        
+        return True
+    
     def __call__(self, batch):
         images = []
         indices = []
@@ -26,30 +37,47 @@ class ImageCollator:
                     print(f"Warning: No dataset_idx found in item")
                     continue
                 
-                # Handle both 'image' and 'images' keys
+                # Handle different image key patterns
                 image_data = None
-                if 'images' in item:
-                    image_data = item['images']
-                elif 'image' in item:
+                collected_images = []
+                
+                if 'image' in item:
+                    # Handle single 'image' key
                     image_data = item['image']
+                    if self._is_valid_image(image_data):
+                        collected_images.append(image_data)
+                elif 'images' in item:
+                    # Handle 'images' key (list of images)
+                    image_data = item['images']
+                    if isinstance(image_data, list):
+                        for img in image_data:
+                            if self._is_valid_image(img):
+                                collected_images.append(img)
+                    else:
+                        if self._is_valid_image(image_data):
+                            collected_images.append(image_data)
+                elif any(key.startswith('image_') and key[6:].isdigit() for key in item.keys()):
+                    # Handle numbered image keys like 'image_0', 'image_1', etc.
+                    numbered_image_keys = [key for key in item.keys() if key.startswith('image_') and key[6:].isdigit()]
+                    # Sort keys by number to maintain order
+                    numbered_image_keys.sort(key=lambda x: int(x.split('_')[1]))
+                    for key in numbered_image_keys:
+                        img_data = item[key]
+                        if self._is_valid_image(img_data):
+                            collected_images.append(img_data)
                 else:
-                    print(f"Warning: No 'image' or 'images' key found in item")
+                    print(f"Warning: No image keys found in item. Available keys: {list(item.keys())}")
                     continue
                 
-                # Handle both single images and lists of images
-                if isinstance(image_data, list):
-                    # If it's a list, process each image but assign same index (they belong to same item)
-                    for img in image_data:
-                        if img is not None:
+                # Process all collected images
+                for img in collected_images:
+                    if self._is_valid_image(img):
+                        try:
                             processed_img = img.convert('RGB')
                             images.append(self.transform(processed_img))
                             indices.append(dataset_idx)
-                else:
-                    # If it's a single image
-                    if image_data is not None:
-                        processed_img = image_data.convert('RGB')
-                        images.append(self.transform(processed_img))
-                        indices.append(dataset_idx)
+                        except Exception as img_error:
+                            print(f"Error processing individual image: {img_error}")
                 
             except Exception as e:
                 print(f"Error processing item: {e}")
@@ -137,7 +165,7 @@ def print_results(embeddings, total_time, model_inference_time, output_dir):
     print(f"Model time per sample: {model_time_per_sample:.5f} seconds")
 
 
-def compute_embeddings(dataset_name, name=None, split='val', output_dir='embeddings', batch_size=512):
+def compute_embeddings(dataset_name, name=None, split='test', output_dir='embeddings-lmms', batch_size=32):
     """Compute embeddings for all images in a HuggingFace dataset."""
     function_start_time = time.time()
     
