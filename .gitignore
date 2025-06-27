@@ -2,6 +2,7 @@
 /data/
 /models/
 /embeddings*/
+/duplicates/
 __pycache__
 *.swp
 .DS_Store
