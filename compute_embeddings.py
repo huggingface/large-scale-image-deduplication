@@ -15,8 +15,11 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 class ImageCollator:
     """Collator class for processing image batches with transforms."""
     
-    def __init__(self, transform):
+    def __init__(self, transform, deduplicate=False, id_column='image_id'):
         self.transform = transform
+        self.deduplicate = deduplicate
+        self.id_column = id_column
+        self.seen_ids = set() if deduplicate else None
     
     def _is_valid_image(self, img):
         """Check if the object is a valid image that can be processed."""
@@ -43,6 +46,13 @@ class ImageCollator:
                 if dataset_idx is None:
                     print(f"Warning: No dataset_idx found in item")
                     continue
+                
+                # Check for deduplication
+                if self.deduplicate and self.id_column in item:
+                    image_id = item[self.id_column]
+                    if image_id in self.seen_ids:
+                        continue
+                    self.seen_ids.add(image_id)
                 
                 # Handle different image key patterns
                 image_data = None
@@ -177,7 +187,7 @@ def print_results(embeddings, total_time, model_inference_time, output_dir):
     print(f"Model time per sample: {model_time_per_sample:.5f} seconds")
 
 
-def compute_embeddings(dataset_name, name=None, split='test', output_dir='embeddings-lmms', batch_size=32):
+def compute_embeddings(dataset_name, name=None, split='test', output_dir='embeddings-lmms', batch_size=32, deduplicate=False, id_column='image_id'):
     """Compute embeddings for all images in a HuggingFace dataset."""
     function_start_time = time.time()
     
@@ -185,7 +195,7 @@ def compute_embeddings(dataset_name, name=None, split='test', output_dir='embedd
     device = setup_device()
     model = load_model(device=device)
     transform = create_transforms()
-    collator = ImageCollator(transform)
+    collator = ImageCollator(transform, deduplicate=deduplicate, id_column=id_column)
     
     # Load dataset and add explicit indices
     dataset = load_dataset(dataset_name, name=name, split=split)
@@ -217,6 +227,8 @@ if __name__ == "__main__":
     parser.add_argument("--name", type=str, default=None, help="Dataset (subset) name")
     parser.add_argument("--output_dir", type=str, default="embeddings", help="Output directory for embeddings")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for processing")
+    parser.add_argument("--deduplicate", action="store_true", help="Enable deduplication based on ID column")
+    parser.add_argument("--id_column", type=str, default="image_id", help="Column name for image ID (default: image_id)")
     
     args = parser.parse_args()
-    compute_embeddings(args.dataset, args.name, args.split, args.output_dir, args.batch_size) 
+    compute_embeddings(args.dataset, args.name, args.split, args.output_dir, args.batch_size, args.deduplicate, args.id_column) 
