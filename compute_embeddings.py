@@ -42,12 +42,17 @@ class ImageCollator:
                 collected_images = []
                 
                 if 'image' in item:
-                    # Handle single 'image' key
                     image_data = item['image']
-                    if self._is_valid_image(image_data):
-                        collected_images.append(image_data)
+                    if isinstance(image_data, list):
+                        # Handle list of images
+                        for img in image_data:
+                            if self._is_valid_image(img):
+                                collected_images.append(img)
+                    else:
+                        # Handle single image
+                        if self._is_valid_image(image_data):
+                            collected_images.append(image_data)
                 elif 'images' in item:
-                    # Handle 'images' key (list of images)
                     image_data = item['images']
                     if isinstance(image_data, list):
                         for img in image_data:
