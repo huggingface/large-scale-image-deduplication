@@ -19,6 +19,7 @@ To compute the embeddings of a single dataset, run
 python compute_embeddings.py 
     --dataset lmms-lab/VQAv2 
     --split test
+    --output_dir embeddings
 ```
 
 To compute all embeddings for the selected datasets in `lmms_datasets.py`, run
@@ -142,4 +143,12 @@ python find_similar_images.py
     --images data/image-vqav2.jpg 
     --embeddings embeddings-lmms/lmms-lab-VQAv2_test_embeddings.npy 
     --image_ids embeddings-lmms/lmms-lab-VQAv2_test_image_ids.npy
+```
+
+To find the duplicates of a whole HF dataset against the precomputed embeddings, run
+```bash
+python dedup_dataset.py 
+  --dataset lmms-lab/RefCOCO  
+  --split test
+  --precomputed_dir embeddings
 ```

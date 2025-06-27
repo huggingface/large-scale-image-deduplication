@@ -102,8 +102,8 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", type=str, required=True, help="HuggingFace dataset name")
     parser.add_argument("--split", type=str, default="val", help="Dataset split to process")
     parser.add_argument("--name", type=str, default=None, help="Dataset (subset) name")
+    parser.add_argument("--precomputed_dir", type=str, help="Directory containing precomputed embeddings")
     parser.add_argument("--threshold", type=float, default=0.90, help="Similarity threshold for duplicate detection")
-    parser.add_argument("--precomputed_dir", type=str, default="embeddings-lmms", help="Directory containing precomputed embeddings")
     parser.add_argument("--output_dir", type=str, default="duplicates", help="Output directory for duplicate results")
 
     args = parser.parse_args()
