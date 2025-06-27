@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from datasets import load_dataset
 import os
 import time
+import math
 
 # Constants
 NORMALIZE_MEAN = [0.485, 0.456, 0.406]
@@ -117,20 +118,55 @@ def denormalize_image(tensor):
     std = torch.tensor(NORMALIZE_STD).view(3, 1, 1)
     return torch.clamp(tensor * std + mean, 0, 1)
 
-def visualize_results(query_tensor, dataset, top_image_ids, top_similarities, output_file):
-    """Create and save visualization of query image and top similar images."""
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+def calculate_grid_size(total_images):
+    """Calculate optimal grid dimensions for displaying images."""
+    # Try to make the grid as square as possible
+    cols = math.ceil(math.sqrt(total_images))
+    rows = math.ceil(total_images / cols)
     
-    # Display query image
+    # Ensure minimum dimensions for readability
+    cols = max(cols, 2)
+    rows = max(rows, 2)
+    
+    return rows, cols
+
+def visualize_results(query_tensor, dataset, top_image_ids, top_similarities, output_file, top_k):
+    """Create and save visualization of query image and top similar images."""
+    total_images = top_k + 1  # +1 for query image
+    rows, cols = calculate_grid_size(total_images)
+    
+    # Adjust figure size based on grid dimensions
+    fig_width = cols * 5
+    fig_height = rows * 5
+    fig, axes = plt.subplots(rows, cols, figsize=(fig_width, fig_height))
+    
+    # Ensure axes is always 2D for consistent indexing
+    if rows == 1:
+        axes = axes.reshape(1, -1)
+    elif cols == 1:
+        axes = axes.reshape(-1, 1)
+    
+    # Display query image in the first position
     query_img = denormalize_image(query_tensor).permute(1, 2, 0).numpy()
     axes[0, 0].imshow(query_img)
     axes[0, 0].set_title("Query Image\n(After Transform)", fontsize=12, fontweight='bold')
     axes[0, 0].axis('off')
     
-    # Display similar images
-    positions = [(0, 1), (0, 2), (1, 0), (1, 1), (1, 2)]
+    # Generate positions for similar images (skip the first position)
+    positions = []
+    for row in range(rows):
+        for col in range(cols):
+            if row == 0 and col == 0:  # Skip query image position
+                continue
+            positions.append((row, col))
+            if len(positions) >= top_k:  # Stop when we have enough positions
+                break
+        if len(positions) >= top_k:
+            break
     
+    # Display similar images
     for i, (pos, img_id, sim) in enumerate(zip(positions, top_image_ids, top_similarities)):
+        row, col = pos
         try:
             dataset_item = dataset[int(img_id)]
             
@@ -157,13 +193,23 @@ def visualize_results(query_tensor, dataset, top_image_ids, top_similarities, ou
                 else:
                     raise ValueError("Image data is None")
             
-            axes[pos].imshow(similar_img)
+            axes[row, col].imshow(similar_img)
         except Exception as e:
-            axes[pos].text(0.5, 0.5, f"Error loading\nimage {img_id}\n{str(e)[:50]}", 
-                          ha='center', va='center', transform=axes[pos].transAxes)
+            axes[row, col].text(0.5, 0.5, f"Error loading\nimage {img_id}\n{str(e)[:50]}", 
+                          ha='center', va='center', transform=axes[row, col].transAxes)
         
-        axes[pos].set_title(f"#{i+1} Similar\nID: {img_id}\nSim: {sim:.5f}", fontsize=10)
-        axes[pos].axis('off')
+        axes[row, col].set_title(f"#{i+1} Similar\nID: {img_id}\nSim: {sim:.5f}", fontsize=10)
+        axes[row, col].axis('off')
+    
+    # Hide any unused subplot positions
+    for row in range(rows):
+        for col in range(cols):
+            if (row == 0 and col == 0):  # Query image position
+                continue
+            position_index = row * cols + col - 1  # -1 because we skip (0,0)
+            if position_index >= top_k:  # Hide unused positions
+                axes[row, col].axis('off')
+                axes[row, col].set_visible(False)
     
     plt.tight_layout()
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
@@ -208,7 +254,7 @@ def find_similar_images(image_paths, embeddings_file, image_ids_file, dataset_na
             output_file = embeddings_file.replace('.npy', f'_{os.path.basename(img_path)}')
             visualize_results(
                 image_tensors[i][0].cpu(), dataset, 
-                image_ids[top_indices[i]], top_similarities[i], output_file
+                image_ids[top_indices[i]], top_similarities[i], output_file, top_k
             )
     
     print_timing_summary(total_timer, loading_timer, model_timer, similarity_timer, len(image_paths))
@@ -240,7 +286,7 @@ def main():
                        help="HuggingFace dataset name for visualization")
     parser.add_argument("--name", type=str, default=None, 
                        help="Dataset (subset) name")
-    parser.add_argument("--split", type=str, default="val", 
+    parser.add_argument("--split", type=str, default="test", 
                        help="Dataset split used for embeddings")
     parser.add_argument("--top_k", type=int, default=5, 
                        help="Number of similar images to retrieve")
