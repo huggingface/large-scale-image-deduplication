@@ -64,7 +64,7 @@ def cluster_embeddings(embeddings_file, n_components=2, metric="cosine",
     return cluster_data
 
 
-def plot_clusters(cluster_data, cluster_labels=None, dataset=None, output_file=None, figsize=(10, 8)):
+def plot_clusters(cluster_data, cluster_labels=None, dataset=None, output_file=None, figsize=(12, 9)):
     """Plot clustering results with optional semantic labels."""
     
     labels = cluster_data['labels']
@@ -72,29 +72,47 @@ def plot_clusters(cluster_data, cluster_labels=None, dataset=None, output_file=N
     n_clusters = cluster_data['n_clusters']
     n_noise = cluster_data['n_noise']
     
-    plt.figure(figsize=figsize, dpi=300)
+    # Set style for prettier plots
+    plt.style.use('dark_background')
+    fig, ax = plt.subplots(figsize=figsize, dpi=300, facecolor='#1a1a1a')
+    ax.set_facecolor('#1a1a1a')
     
-    # Plot noise points
+    # Define a prettier color palette
+    colors = plt.cm.Set3(np.linspace(0, 1, max(12, n_clusters)))
+    
+    # Plot noise points with subtle styling
     noise_mask = labels == -1
     if noise_mask.any():
-        plt.scatter(embeddings[noise_mask, 0], embeddings[noise_mask, 1], 
-                   c="lightgray", s=0.5, alpha=0.3, label="Noise")
+        ax.scatter(embeddings[noise_mask, 0], embeddings[noise_mask, 1], 
+                  c="#404040", s=10, alpha=0.5, label="Noise", edgecolors='none')
     
-    # Plot clusters
+    # Plot clusters with prettier colors and styling
     clustered_mask = labels != -1
     if clustered_mask.any():
-        plt.scatter(embeddings[clustered_mask, 0], embeddings[clustered_mask, 1], 
-                   c=labels[clustered_mask], s=1, alpha=0.8, cmap="tab10")
+        unique_labels = np.unique(labels[clustered_mask])
+        for i, label in enumerate(unique_labels):
+            cluster_mask = labels == label
+            ax.scatter(embeddings[cluster_mask, 0], embeddings[cluster_mask, 1], 
+                      c=[colors[i % len(colors)]], s=25, alpha=0.8, 
+                      edgecolors='white', linewidth=0.1)
     
     # Add semantic labels if provided
     if cluster_labels:
-        _add_cluster_labels(embeddings, labels, cluster_labels)
+        _add_cluster_labels(embeddings, labels, cluster_labels, ax)
     
-    if dataset is None:
-        plt.title(f"{n_clusters} clusters, {len(labels)-n_noise}/{len(labels)} points clustered")
-    else:
-        plt.title(f"{dataset}\n{n_clusters} clusters, {len(labels)-n_noise}/{len(labels)} points clustered")
-    plt.axis('off')
+    # Style the title and layout
+    #title_text = f"{n_clusters} clusters • {len(labels)-n_noise:,}/{len(labels):,} points clustered"
+    if dataset:
+        title_text = f"{dataset}" #\n{title_text}"
+    
+    ax.set_title(title_text, fontsize=14, color='white', fontweight='300', pad=20)
+    ax.axis('off')
+    
+    # Remove any remaining axes elements
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
     
     if output_file is None:
         if dataset is not None:
@@ -103,24 +121,58 @@ def plot_clusters(cluster_data, cluster_labels=None, dataset=None, output_file=N
         else:
             output_file = 'clustering.png'
     
-    plt.savefig(output_file, bbox_inches='tight', dpi=300)
+    plt.savefig(output_file, bbox_inches='tight', dpi=300, facecolor='#1a1a1a')
     print(f"Plot saved to {output_file}")
     plt.close()
 
 
-def _add_cluster_labels(embeddings, labels, cluster_labels):
+def _validate_semantic_label(label):
+    """Validate if a semantic label is properly formatted and not hallucinated."""
+    if not label or not isinstance(label, str):
+        return False
+    
+    label = label.strip()
+    
+    # Filter out default cluster labels
+    if label.startswith("Cluster_") or label == "Noise":
+        return False
+    
+    # Check for comma-separated format (Word1, Word2)
+    parts = [part.strip() for part in label.split(',')]
+    
+    # Should have 1-3 parts, each being reasonable words
+    if len(parts) < 1 or len(parts) > 3:
+        return False
+    
+    # Each part should be 1-3 words, reasonable length
+    for part in parts:
+        words = part.split()
+        if len(words) < 1 or len(words) > 3:
+            return False
+        if len(part) > 25:  # Too long, likely hallucinated
+            return False
+        if not all(word.replace('-', '').replace('_', '').isalpha() for word in words):
+            return False  # Contains non-alphabetic characters
+    
+    return True
+
+
+def _add_cluster_labels(embeddings, labels, cluster_labels, ax):
     """Add text labels to cluster centers."""
-    # Calculate cluster centers
+    # Calculate cluster centers and filter valid labels
     centers = {}
     for label in set(labels):
         if label != -1 and label in cluster_labels:
-            mask = labels == label
-            centers[label] = (np.mean(embeddings[mask, 0]), np.mean(embeddings[mask, 1]))
+            semantic_label = cluster_labels[label]
+            # Only add labels that pass validation
+            if _validate_semantic_label(semantic_label):
+                mask = labels == label
+                centers[label] = (np.mean(embeddings[mask, 0]), np.mean(embeddings[mask, 1]), semantic_label)
     
     # Add text annotations
-    for label, (x, y) in centers.items():
-        text = plt.text(x, y, cluster_labels[label], ha='center', va='center', 
-                       fontsize=4, alpha=0.8, weight='normal')
+    for label, (x, y, text_label) in centers.items():
+        text = ax.text(x, y, text_label, ha='center', va='center', 
+                       fontsize=3, alpha=0.9, color='black')
         text.set_bbox(dict(facecolor='white', alpha=0.6, linewidth=0, boxstyle='round,pad=0.2'))
 
 

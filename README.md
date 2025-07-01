@@ -245,3 +245,14 @@ Duplicate detection: 24.66074 seconds (37.7%)
 Found 10000 duplicate images out of 10000
 Duplicate results saved to: duplicates/duplicates_lmms-lab-OCRBench-v2_test.json
 ```
+
+# Clustering
+
+To visualize the dataset you can cluster the computed embeddings. We provide a simple clustering script that uses UMAP and DBSCAN to cluster the samples and optionally adds a semantic label through an VLM. This can be done by
+```bash
+# Pure clustering (eps and min-samples for DBSCAN are tunable as arguments)
+python cluster_embeddings.py --embeddings embeddings/lmms-lab-MMMU_test_embeddings.npy
+
+# Custom parameters and generated semantic labels by taking some samples from every cluster and feeding it into a VLM
+python cluster_embeddings.py --embeddings embeddings/lmms-lab-MMMU_test_embeddings.npy --eps 0.25 --min-samples 20 --generate-labels --dataset lmms-lab/MMMU --split test
+```
