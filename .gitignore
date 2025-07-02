@@ -8,6 +8,8 @@ __pycache__
 .DS_Store
 .venv/
 
+*.png
+
 uv.lock
 pyproject.toml
 .python-version

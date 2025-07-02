@@ -9,3 +9,10 @@ augly
 pandas
 numpy
 tensorboard
+scikit-learn
+umap-learn
+matplotlib
+transformers
+datasets
+Pillow
+tqdm

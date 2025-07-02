@@ -172,8 +172,8 @@ def _add_cluster_labels(embeddings, labels, cluster_labels, ax):
     # Add text annotations
     for label, (x, y, text_label) in centers.items():
         text = ax.text(x, y, text_label, ha='center', va='center', 
-                       fontsize=3, alpha=0.9, color='black')
-        text.set_bbox(dict(facecolor='white', alpha=0.6, linewidth=0, boxstyle='round,pad=0.2'))
+                       fontsize=6, alpha=0.8, color='black')
+        text.set_bbox(dict(facecolor='white', alpha=0.5, linewidth=0, boxstyle='round,pad=0.2'))
 
 
 def _load_image_ids(embeddings_file):
